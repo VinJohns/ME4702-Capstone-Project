@@ -34,8 +34,8 @@ const int nutrient_pump_pin = 6;
 const int valve_pin = 9;
 const int switch_pin = 8;
 
-float slope = 0.4123;
-float intercept = -0.01315;
+float slope = 2.016;
+float intercept = -1.4542;
 float SOIL_VOLUME = 4.0*17.0*8.0; // This is the approximate volume of soil (in^3)
 float WATER_VOLUME = 1.5*22.0*7.0; // This is the approximate volume of water (in^3)
 
@@ -51,7 +51,7 @@ int nutrient_counter = 0; // Counter for nutrient sensing, only happens once a w
 void setup() {
   // put your setup code here, to run once:
 
-  Serial.begin(9600); // set up a serial connection with the computer (testing purposes only)
+  //Serial.begin(9600); // set up a serial connection with the computer (testing purposes only)
   //analogReadResolution(12); // Analog inputs go from 0 to 4095 (0 - 5V), 12 bits so 2^12 integers (doesn't work with Arduino Uno)
 
   pinMode(water_pump_pin, OUTPUT); // Set the water pump pin to output so we can control the pump
@@ -84,10 +84,10 @@ void loop() {
         
         // Create runoff by pumping a lot of water
         digitalWrite(water_pump_pin, HIGH); // Turn the pump on
-        delay(2*60000); // Delay for 4 minutes?
+        delay(5*60000); // Delay for 5 minutes?
         digitalWrite(water_pump_pin, LOW); // Turn the pump off
     
-        delay(60000); // Wait 1 minute for runoff
+        delay(4*60000); // Wait 4 minutes for runoff
         
         float tds_input = get_median_reading(tds_pin); // Read tds sensor
     
@@ -103,18 +103,20 @@ void loop() {
         float nutrient_amount = 120 + nutrient_setting/1023.0 * 640; // target ppm of nutrients in runoff water (assume nutrient solution is roughly same density as water, ppm is approx mg/L)
         nutrient_amount = nutrient_amount - tds_value; // (ppm)
 
-        nutrient_amount = nutrient_amount / 1000 * WATER_VOLUME / 61.024; // convert water volume to L from in^3 and nutrient amount (ppm) to g, 
+        nutrient_amount = nutrient_amount / 1000 * WATER_VOLUME / 61.024; // convert water volume to L from in^3 and nutrient amount (ppm) to g.
+        //Serial.println(nutrient_setting);
+        //Serial.println(nutrient_amount);
         
         if (nutrient_amount <= 0) {
           float nutrient_time = 0;
         }
         else {
-          // Assuming a density of 1 g/mL, nutrient_amount is in mL
-          float nutrient_time = nutrient_amount / 0.15; // how long to water the plants per day, assuming the drip emitters have an average flow of 1 mL/s?
+          // Assuming a density of 1 g/mL, nutrient_amount is in mL, 60% Nutrient solution to 40 water% in the fill tube
+          float nutrient_time = nutrient_amount / 0.6; // how long to add diluted nutrient solution, assuming the drip emitters have an average flow of 1 mL/s?
 
           // Water for this long
           digitalWrite(nutrient_pump_pin, HIGH); // Turn the pump on
-          delay(nutrient_time); // Delay for length of time specified above
+          delay(nutrient_time*1000); // Delay for length of time specified above, .5? sec to 4.8 sec with no input from tds sensor
           digitalWrite(nutrient_pump_pin, LOW); // Turn the pump off
           //analogWrite(nutrient_pump_pin, 200); // Write to pump (0 - 256) (check if this affects the pump's output)
         }
@@ -125,7 +127,7 @@ void loop() {
 
         float moisture_setting = analogRead(moisture_control_pin); // Check the potentiometer for moisture setting
     
-        float water_amount = 165 + moisture_setting/1023.0 * 735; // mL amount to water per day
+        float water_amount = 410 + moisture_setting/1023.0 * 735; // mL amount to water per day
         
         float moisture_input = get_median_reading(moisture_pin); // Read the moisture sensor
         float moisture_voltage = moisture_input * 3.0 / 1023.0; // Convert the moisture sensor analog reading to a voltage
@@ -141,6 +143,12 @@ void loop() {
         //current_moisture = current_moisture / 61.024 * 1000; // convert to mL from in^3
     
         water_amount = water_amount - current_moisture; // adjust the amount to water based on the current moisture
+        //Serial.println(moisture_setting);
+        //Serial.println(moisture_voltage);
+        //Serial.println(moisture);
+        //Serial.println(current_moisture);
+        //Serial.println(water_amount);
+        
         if (water_amount <= 0) {
           float water_time = 0;
         }
@@ -149,7 +157,7 @@ void loop() {
           
           // Water for this long
           digitalWrite(water_pump_pin, HIGH); // Turn the pump on
-          delay(water_time); // Delay for length of time specified above WATER FLOW FROM 7 DRIP EMITTERS IS ABOUT 6-7 mL/s
+          delay(water_time*1000); // Delay for length of time specified above WATER FLOW FROM 7 DRIP EMITTERS IS ABOUT 6-7 mL/s
           digitalWrite(water_pump_pin, LOW); // Turn the pump off
           //analogWrite(water_pump_pin, 200); // Write to pump (0 - 256) (check if this affects the pump's output)
         }
